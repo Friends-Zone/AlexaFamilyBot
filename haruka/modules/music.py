@@ -18,11 +18,9 @@ async def _(event):
     if event.fwd_from:
         return
     cmd = event.pattern_match.group(1)
-    reply_to_id = event.message.id
-    if event.reply_to_msg_id:
-        reply_to_id = event.reply_to_msg_id
+    reply_to_id = event.reply_to_msg_id or event.message.id
     await event.reply("ok finding the song")
-    os.system("instantmusic -q -s "+cmd)
+    os.system(f"instantmusic -q -s {cmd}")
     bro = 'for f in *.webm; do      mv -- "$f" "${f%.webm}.mp3"; done'
     os.system(bro)
     l = glob.glob("*.mp3")

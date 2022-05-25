@@ -19,15 +19,14 @@ def add_blacklist_url(bot: Bot, update: Update):
     urls = message.text.split(None, 1)
     if len(urls) > 1:
         urls = urls[1]
-        to_blacklist = list(set(uri.strip()
-                                for uri in urls.split("\n") if uri.strip()))
+        to_blacklist = list({uri.strip() for uri in urls.split("\n") if uri.strip()})
         blacklisted = []
 
         for uri in to_blacklist:
             extract_url = tldextract.extract(uri)
             if extract_url.domain and extract_url.suffix:
-                blacklisted.append(extract_url.domain + "." + extract_url.suffix)
-                sql.blacklist_url(chat.id, extract_url.domain + "." + extract_url.suffix)
+                blacklisted.append(f"{extract_url.domain}.{extract_url.suffix}")
+                sql.blacklist_url(chat.id, f"{extract_url.domain}.{extract_url.suffix}")
 
         if len(to_blacklist) == 1:
             extract_url = tldextract.extract(to_blacklist[0])
@@ -35,15 +34,21 @@ def add_blacklist_url(bot: Bot, update: Update):
                 message.reply_text(
                     "Added <code>{}</code> domain to the blacklist!".format(
                         html.escape(
-                            extract_url.domain + "." + extract_url.suffix)),
-                    parse_mode=ParseMode.HTML)
+                            f"{extract_url.domain}.{extract_url.suffix}"
+                        )
+                    ),
+                    parse_mode=ParseMode.HTML,
+                )
+
             else:
                 message.reply_text(
                     "You are trying to blacklist an invalid url")
         else:
             message.reply_text(
-                "Added <code>{}</code> domains to the blacklist.".format(
-                    len(blacklisted)), parse_mode=ParseMode.HTML)
+                f"Added <code>{len(blacklisted)}</code> domains to the blacklist.",
+                parse_mode=ParseMode.HTML,
+            )
+
     else:
         message.reply_text(
             "Tell me which urls you would like to add to the blacklist.")
@@ -58,12 +63,14 @@ def rm_blacklist_url(bot: Bot, update: Update):
 
     if len(urls) > 1:
         urls = urls[1]
-        to_unblacklist = list(set(uri.strip()
-                                  for uri in urls.split("\n") if uri.strip()))
+        to_unblacklist = list({uri.strip() for uri in urls.split("\n") if uri.strip()})
         unblacklisted = 0
         for uri in to_unblacklist:
             extract_url = tldextract.extract(uri)
-            success = sql.rm_url_from_blacklist(chat.id, extract_url.domain + "." + extract_url.suffix)
+            success = sql.rm_url_from_blacklist(
+                chat.id, f"{extract_url.domain}.{extract_url.suffix}"
+            )
+
             if success:
                 unblacklisted += 1
 
@@ -78,19 +85,20 @@ def rm_blacklist_url(bot: Bot, update: Update):
                 message.reply_text("This isn't a blacklisted domain...!")
         elif unblacklisted == len(to_unblacklist):
             message.reply_text(
-                "Removed <code>{}</code> domains from the blacklist.".format(
-                    unblacklisted), parse_mode=ParseMode.HTML)
+                f"Removed <code>{unblacklisted}</code> domains from the blacklist.",
+                parse_mode=ParseMode.HTML,
+            )
+
         elif not unblacklisted:
             message.reply_text(
                 "None of these domains exist, so they weren't removed.",
                 parse_mode=ParseMode.HTML)
         else:
             message.reply_text(
-                "Removed <code>{}</code> domains from the blacklist. {} did not exist, "
-                "so were not removed.".format(
-                    unblacklisted,
-                    len(to_unblacklist) - unblacklisted),
-                parse_mode=ParseMode.HTML)
+                f"Removed <code>{unblacklisted}</code> domains from the blacklist. {len(to_unblacklist) - unblacklisted} did not exist, so were not removed.",
+                parse_mode=ParseMode.HTML,
+            )
+
     else:
         message.reply_text(
             "Tell me which domains you would like to remove from the blacklist.")
@@ -105,15 +113,13 @@ def del_blacklist_url(bot: Bot, update: Update):
     extracted_domains = []
     for obj, url in parsed_entities.items():
         extract_url = tldextract.extract(url)
-        extracted_domains.append(extract_url.domain + "." + extract_url.suffix)
+        extracted_domains.append(f"{extract_url.domain}.{extract_url.suffix}")
     for url in sql.get_blacklisted_urls(chat.id):
         if url in extracted_domains:
             try:
                 message.delete()
             except BadRequest as excp:
-                if excp.message == "Message to delete not found":
-                    pass
-                else:
+                if excp.message != "Message to delete not found":
                     LOGGER.exception("Error while deleting blacklist message.")
             break
 

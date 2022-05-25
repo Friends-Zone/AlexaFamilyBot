@@ -37,10 +37,7 @@ def copypasta(bot: Bot, update: Update):
         elif c.lower() == b_char:
             reply_text += "🅱️"
         else:
-            if bool(random.getrandbits(1)):
-                reply_text += c.upper()
-            else:
-                reply_text += c.lower()
+            reply_text += c.upper() if bool(random.getrandbits(1)) else c.lower()
     reply_text += random.choice(emojis)
     message.reply_to_message.reply_text(reply_text)
 
@@ -67,10 +64,7 @@ def angrymoji(bot: Bot, update: Update):
     message = update.effective_message
     reply_text = "😡 "
     for i in message.reply_to_message.text:
-        if i == " ":
-            reply_text += " 😡 "
-        else:
-            reply_text += i
+        reply_text += " 😡 " if i == " " else i
     reply_text += " 😡"
     message.reply_to_message.reply_text(reply_text)
     
@@ -80,10 +74,7 @@ def crymoji(bot: Bot, update: Update):
     message = update.effective_message
     reply_text = "😭 "
     for i in message.reply_to_message.text:
-        if i == " ":
-            reply_text += " 😭 "
-        else:
-            reply_text += i
+        reply_text += " 😭 " if i == " " else i
     reply_text += " 😭"
     message.reply_to_message.reply_text(reply_text)
     

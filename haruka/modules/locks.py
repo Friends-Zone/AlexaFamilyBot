@@ -67,8 +67,6 @@ tg.CommandHandler = CustomCommandHandler
 # NOT ASYNC
 def restr_members(bot, chat_id, members, messages=False, media=False, other=False, previews=False):
     for mem in members:
-        if mem.user in SUDO_USERS:
-            pass
         try:
             bot.restrict_chat_member(chat_id, mem.user,
                                      can_send_messages=messages,
@@ -105,7 +103,7 @@ def lock(bot: Bot, update: Update, args: List[str]) -> str:
     user = update.effective_user  # type: Optional[User]
     message = update.effective_message  # type: Optional[Message]
     if can_delete(chat, bot.id):
-        if len(args) >= 1:
+        if args:
             if args[0] in LOCK_TYPES:
                 sql.update_lock(chat.id, args[0], locked=True)
                 message.reply_text(tld(chat.id, "Locked {} messages for all non-admins!").format(args[0]))
@@ -146,7 +144,7 @@ def unlock(bot: Bot, update: Update, args: List[str]) -> str:
     user = update.effective_user  # type: Optional[User]
     message = update.effective_message  # type: Optional[Message]
     if is_user_admin(chat, message.from_user.id):
-        if len(args) >= 1:
+        if args:
             if args[0] in LOCK_TYPES:
                 sql.update_lock(chat.id, args[0], locked=False)
                 message.reply_text(tld(chat.id, "Unlocked {} for everyone!").format(args[0]))
@@ -213,9 +211,7 @@ def del_lockables(bot: Bot, update: Update):
                 try:
                     message.delete()
                 except BadRequest as excp:
-                    if excp.message == "Message to delete not found":
-                        pass
-                    else:
+                    if excp.message != "Message to delete not found":
                         LOGGER.exception("ERROR in lockables")
 
             break
@@ -231,9 +227,7 @@ def rest_handler(bot: Bot, update: Update):
             try:
                 msg.delete()
             except BadRequest as excp:
-                if excp.message == "Message to delete not found":
-                    pass
-                else:
+                if excp.message != "Message to delete not found":
                     LOGGER.exception("ERROR in restrictions")
             break
 
@@ -242,9 +236,9 @@ def build_lock_message(chat, chatP, user, chatname):
     locks = sql.get_locks(chat.id)
     restr = sql.get_restr(chat.id)
     if not (locks or restr):
-        res = tld(chatP.id, "There are no current locks in *{}*.".format(chatname))
+        res = tld(chatP.id, f"There are no current locks in *{chatname}*.")
     else:
-        res = tld(chatP.id, "These are the locks in *{}*:".format(chatname))
+        res = tld(chatP.id, f"These are the locks in *{chatname}*:")
         if locks:
             res += "\n - sticker = `{}`" \
                    "\n - audio = `{}`" \

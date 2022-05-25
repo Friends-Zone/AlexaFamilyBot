@@ -19,7 +19,7 @@ import rapidjson as json
 
 @register(pattern=r"^/magisk$")
 async def magisk(event):
-    if event.from_id == None:
+    if event.from_id is None:
         return
 
     url = 'https://raw.githubusercontent.com/topjohnwu/magisk_files/'
@@ -30,23 +30,23 @@ async def magisk(event):
     for variants in variant:
         fetch = get(url + variants + '.json')
         data = json.loads(fetch.content)
-        if variants == "master/stable":
-            name = "**Stable**"
-            cc = 1
-            branch = "master"
-        elif variants == "master/beta":
-            name = "**Beta**"
-            cc = 0
-            branch = "master"
-        elif variants == "canary/release":
-            name = "**Canary**"
-            cc = 1
-            branch = "canary"
-        elif variants == "canary/debug":
+        if variants == "canary/debug":
             name = "**Canary (Debug)**"
             cc = 1
             branch = "canary"
 
+        elif variants == "canary/release":
+            name = "**Canary**"
+            cc = 1
+            branch = "canary"
+        elif variants == "master/beta":
+            name = "**Beta**"
+            cc = 0
+            branch = "master"
+        elif variants == "master/stable":
+            name = "**Stable**"
+            cc = 1
+            branch = "master"
         releases += f'{name}: [ZIP v{data["magisk"]["version"]}]({data["magisk"]["link"]}) | ' \
                     f'[APK v{data["app"]["version"]}]({data["app"]["link"]}) | '
 
@@ -74,8 +74,7 @@ async def device_info(request):
     data = json.loads(
         get("https://raw.githubusercontent.com/androidtrackers/"
             "certified-android-devices/master/by_device.json").text)
-    results = data.get(codename)
-    if results:
+    if results := data.get(codename):
         reply = f"**Search results for {codename}**:\n\n"
         for item in results:
             reply += f"**Brand**: {item['brand']}\n" \
@@ -108,11 +107,12 @@ async def codename_info(request):
     devices_lower = {k.lower(): v
                      for k, v in data.items()}  # Lower brand names in JSON
     devices = devices_lower.get(brand)
-    results = [
-        i for i in devices if i["name"].lower() == device.lower()
+    if results := [
+        i
+        for i in devices
+        if i["name"].lower() == device.lower()
         or i["model"].lower() == device.lower()
-    ]
-    if results:
+    ]:
         reply = f"**Search results for {brand} {device}**:\n\n"
         if len(results) > 8:
             results = results[:8]

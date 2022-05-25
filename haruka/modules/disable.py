@@ -73,17 +73,16 @@ if is_module_loaded(FILENAME):
     def disable(bot: Bot, update: Update, args: List[str]):
         chat = update.effective_chat  # type: Optional[Chat]
         user = update.effective_user  # type: Optional[User]
-    
-        conn = connected(bot, update, chat, user.id)
-        if not conn == False:
-            chatD = dispatcher.bot.getChat(conn)
-        else:
-            if chat.type == "private":
-                exit(1)
-            else:
-                chatD = update.effective_chat
 
-        if len(args) >= 1:
+        conn = connected(bot, update, chat, user.id)
+        if conn != False:
+            chatD = dispatcher.bot.getChat(conn)
+        elif chat.type == "private":
+            exit(1)
+        else:
+            chatD = update.effective_chat
+
+        if args:
             disable_cmd = args[0]
             if disable_cmd.startswith(CMD_STARTERS):
                 disable_cmd = disable_cmd[1:]
@@ -104,17 +103,16 @@ if is_module_loaded(FILENAME):
     def enable(bot: Bot, update: Update, args: List[str]):
         chat = update.effective_chat  # type: Optional[Chat]
         user = update.effective_user  # type: Optional[User]
-    
-        conn = connected(bot, update, chat, user.id)
-        if not conn == False:
-            chatD = dispatcher.bot.getChat(conn)
-        else:
-            if chat.type == "private":
-                exit(1)
-            else:
-                chatD = update.effective_chat
 
-        if len(args) >= 1:
+        conn = connected(bot, update, chat, user.id)
+        if conn != False:
+            chatD = dispatcher.bot.getChat(conn)
+        elif chat.type == "private":
+            exit(1)
+        else:
+            chatD = update.effective_chat
+
+        if args:
             enable_cmd = args[0]
             if enable_cmd.startswith(CMD_STARTERS):
                 enable_cmd = enable_cmd[1:]
@@ -134,9 +132,11 @@ if is_module_loaded(FILENAME):
     def list_cmds(bot: Bot, update: Update):
         chat = update.effective_chat  # type: Optional[Chat]
         if DISABLE_CMDS + DISABLE_OTHER:
-            result = ""
-            for cmd in set(DISABLE_CMDS + DISABLE_OTHER):
-                result += " • `{}`\n".format(escape_markdown(cmd))
+            result = "".join(
+                " • `{}`\n".format(escape_markdown(cmd))
+                for cmd in set(DISABLE_CMDS + DISABLE_OTHER)
+            )
+
             update.effective_message.reply_text(tld(chat.id, "The following commands are toggleable:\n{}").format(result),
                                                 parse_mode=ParseMode.MARKDOWN)
         else:
@@ -148,29 +148,22 @@ if is_module_loaded(FILENAME):
 
         disabled = sql.get_all_disabled(chatD_id)
 
-        result = ""
-        for cmd in disabled:
-            result += " • `{}`\n".format(escape_markdown(cmd))
-
-        if result == "":
-            return tld(chat_id, "No commands are disabled!")
-        else:
-            return result
+        result = "".join(" • `{}`\n".format(escape_markdown(cmd)) for cmd in disabled)
+        return result or tld(chat_id, "No commands are disabled!")
 
 
     @run_async
     def commands(bot: Bot, update: Update):
         chat = update.effective_chat
         user = update.effective_user  # type: Optional[User]
-    
+
         conn = connected(bot, update, chat, user.id, need_admin=False)
-        if not conn == False:
+        if conn != False:
             chatD = dispatcher.bot.getChat(conn)
+        elif chat.type == "private":
+            exit(1)
         else:
-            if chat.type == "private":
-                exit(1)
-            else:
-                chatD = update.effective_chat
+            chatD = update.effective_chat
 
         disabled = sql.get_all_disabled(chatD.id)
         if not disabled:
@@ -182,7 +175,7 @@ if is_module_loaded(FILENAME):
 
 
     def __stats__():
-        return "{} disabled items, across {} chats.".format(sql.num_disabled(), sql.num_chats())
+        return f"{sql.num_disabled()} disabled items, across {sql.num_chats()} chats."
 
 
     def __migrate__(old_chat_id, new_chat_id):

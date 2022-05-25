@@ -75,42 +75,48 @@ async def is_user_in_chatt(chat_id: int, user_id: int):
 
 
 async def can_delete_messagess(message):
-    status = False
-    if message.chat.admin_rights:
-        status = message.chat.admin_rights.delete_messages
-    return status
+    return (
+        message.chat.admin_rights.delete_messages
+        if message.chat.admin_rights
+        else False
+    )
 
 
 async def can_change_infoo(message):
-    status = False
-    if message.chat.admin_rights:
-        status = message.chat.admin_rights.change_info
-    return status
+    return (
+        message.chat.admin_rights.change_info
+        if message.chat.admin_rights
+        else False
+    )
 
 
 async def can_ban_userss(message):
-    status = False
-    if message.chat.admin_rights:
-        status = message.chat.admin_rights.ban_users
-    return status
+    return (
+        message.chat.admin_rights.ban_users
+        if message.chat.admin_rights
+        else False
+    )
 
 
 async def can_invite_userss(message):
-    status = False
-    if message.chat.admin_rights:
-        status = message.chat.admin_rights.invite_users
-    return status
+    return (
+        message.chat.admin_rights.invite_users
+        if message.chat.admin_rights
+        else False
+    )
 
 
 async def can_add_adminss(message):
-    status = False
-    if message.chat.admin_rights:
-        status = message.chat.admin_rights.add_admins
-    return status
+    return (
+        message.chat.admin_rights.add_admins
+        if message.chat.admin_rights
+        else False
+    )
 
 
 async def can_pin_messagess(message):
-    status = False
-    if message.chat.admin_rights:
-        status = message.chat.admin_rights.pin_messages
-    return status
+    return (
+        message.chat.admin_rights.pin_messages
+        if message.chat.admin_rights
+        else False
+    )

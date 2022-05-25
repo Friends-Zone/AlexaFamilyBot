@@ -285,23 +285,20 @@ def slap(bot: Bot, update: Update, args: List[str]):
 
     # get user who sent message
     if msg.from_user.username:
-        curr_user = "@" + escape_markdown(msg.from_user.username)
+        curr_user = f"@{escape_markdown(msg.from_user.username)}"
     else:
-        curr_user = "[{}](tg://user?id={})".format(msg.from_user.first_name, msg.from_user.id)
+        curr_user = f"[{msg.from_user.first_name}](tg://user?id={msg.from_user.id})"
 
-    user_id = extract_user(update.effective_message, args)
-    if user_id:
+    if user_id := extract_user(update.effective_message, args):
         slapped_user = bot.get_chat(user_id)
         user1 = curr_user
         if slapped_user.username:
-            user2 = "@" + escape_markdown(slapped_user.username)
+            user2 = f"@{escape_markdown(slapped_user.username)}"
         else:
-            user2 = "[{}](tg://user?id={})".format(slapped_user.first_name,
-                                                   slapped_user.id)
+            user2 = f"[{slapped_user.first_name}](tg://user?id={slapped_user.id})"
 
-    # if no target found, bot targets the sender
     else:
-        user1 = "[{}](tg://user?id={})".format(bot.first_name, bot.id)
+        user1 = f"[{bot.first_name}](tg://user?id={bot.id})"
         user2 = curr_user
 
     temp = random.choice(tld(chat.id, "SLAP_TEMPLATES-K"))
@@ -381,22 +378,20 @@ def info(bot: Bot, update: Update, args: List[str]):
 
     if user.id == OWNER_ID:
         text += tld(chat.id, "\n\nAy, This guy is my owner. I would never do anything against him!")
+    elif user.id in SUDO_USERS:
+        text += tld(chat.id, "\nThis person is one of my sudo users! " \
+        "Nearly as powerful as my owner - so watch it.")
     else:
-        if user.id in SUDO_USERS:
-            text += tld(chat.id, "\nThis person is one of my sudo users! " \
-            "Nearly as powerful as my owner - so watch it.")
-        else:
-            if user.id in SUPPORT_USERS:
-                text += tld(chat.id, "\nThis person is one of my support users! " \
-                        "Not quite a sudo user, but can still gban you off the map.")
+        if user.id in SUPPORT_USERS:
+            text += tld(chat.id, "\nThis person is one of my support users! " \
+                    "Not quite a sudo user, but can still gban you off the map.")
 
-            if user.id in WHITELIST_USERS:
-                text += tld(chat.id, "\nThis person has been whitelisted! " \
-                        "That means I'm not allowed to ban/kick them.")
+        if user.id in WHITELIST_USERS:
+            text += tld(chat.id, "\nThis person has been whitelisted! " \
+                    "That means I'm not allowed to ban/kick them.")
 
     for mod in USER_INFO:
-        mod_info = mod.__user_info__(user.id, chat.id).strip()
-        if mod_info:
+        if mod_info := mod.__user_info__(user.id, chat.id).strip():
             text += "\n\n" + mod_info
 
     update.effective_message.reply_text(text, parse_mode=ParseMode.HTML)
@@ -413,12 +408,8 @@ def echo(bot: Bot, update: Update):
 
 @run_async
 def reply_keyboard_remove(bot: Bot, update: Update):
-    reply_keyboard = []
-    reply_keyboard.append([
-        ReplyKeyboardRemove(
-            remove_keyboard=True
-        )
-    ])
+    reply_keyboard = [[ReplyKeyboardRemove(remove_keyboard=True)]]
+
     reply_markup = ReplyKeyboardRemove(
         remove_keyboard=True
     )
@@ -533,7 +524,7 @@ def paste(bot: Bot, update: Update, args: List[str]):
 def get_paste_content(bot: Bot, update: Update, args: List[str]):
     message = update.effective_message
 
-    if len(args) >= 1:
+    if args:
         key = args[0]
     else:
         message.reply_text("Please supply a paste key!")
@@ -560,14 +551,16 @@ def get_paste_content(bot: Bot, update: Update, args: List[str]):
                 update.effective_message.reply_text('Unknown error occured')
         r.raise_for_status()
 
-    update.effective_message.reply_text('```' + escape_markdown(r.text) + '```', parse_mode=ParseMode.MARKDOWN)
+    update.effective_message.reply_text(
+        f'```{escape_markdown(r.text)}```', parse_mode=ParseMode.MARKDOWN
+    )
 
 
 @run_async
 def get_paste_stats(bot: Bot, update: Update, args: List[str]):
     message = update.effective_message
 
-    if len(args) >= 1:
+    if args:
         key = args[0]
     else:
         message.reply_text("Please supply a paste key!")
@@ -653,9 +646,8 @@ async def wiki(wiki_q):
         return
     result = summary(match)
     if len(result) >= 4096:
-        file = open("output.txt", "w+")
-        file.write(result)
-        file.close()
+        with open("output.txt", "w+") as file:
+            file.write(result)
         await wiki_q.client.send_file(
             wiki_q.chat_id,
             "output.txt",
@@ -771,7 +763,7 @@ async def figlet(event):
         return
     input_str = event.pattern_match.group(1)
     result = pyfiglet.figlet_format(input_str)
-    await event.respond("`{}`".format(result))
+    await event.respond(f"`{result}`")
 
 from bing_image_downloader import downloader
 
@@ -787,10 +779,10 @@ async def img_sampler(event):
     try:
         lim = lim[0]
         lim = lim.replace("lim=", "")
-        query = query.replace("lim=" + lim[0], "")
+        query = query.replace(f"lim={lim[0]}", "")
     except IndexError:
         lim = 5
-    
+
     # creating list of arguments
     downloader.download(query, limit=lim)
     files = []
@@ -810,20 +802,20 @@ def shrug(bot: Bot, update: Update):
     else:
         message.reply_text(default_msg)
         
-@run_async     
+@run_async
 def ud(bot: Bot, update: Update, args):
-        term = ' '.join(args)
-        ud_api = "http://api.urbandictionary.com/v0/define?term=" + term
-        ud_reply = json.loads(requests.get(ud_api).content)['list']
-        if len(args) == 0:
-            update.message.reply_text("USAGE: /ud <Word>")
-        elif len(ud_reply) != 0:
-            ud = ud_reply[0]
-            reply_text = "<b>{0}</b>\n<a href='{1}'>{1}</a>\n<i>By {2}</i>\n\nDefinition: {3}\n\nExample: {4}".format(
-                ud['word'], ud['permalink'], ud['author'], ud['definition'], ud['example'])
-            update.message.reply_text(reply_text, parse_mode='HTML')
-        else:
-            update.message.reply_text("Term not found")
+    term = ' '.join(args)
+    ud_api = f"http://api.urbandictionary.com/v0/define?term={term}"
+    ud_reply = json.loads(requests.get(ud_api).content)['list']
+    if len(args) == 0:
+        update.message.reply_text("USAGE: /ud <Word>")
+    elif len(ud_reply) != 0:
+        ud = ud_reply[0]
+        reply_text = "<b>{0}</b>\n<a href='{1}'>{1}</a>\n<i>By {2}</i>\n\nDefinition: {3}\n\nExample: {4}".format(
+            ud['word'], ud['permalink'], ud['author'], ud['definition'], ud['example'])
+        update.message.reply_text(reply_text, parse_mode='HTML')
+    else:
+        update.message.reply_text("Term not found")
 
 @register(pattern="^/yt (.*)")
 async def yts_search(video_q):
@@ -872,11 +864,13 @@ async def youtube_search(query,
         location=location,
         locationRadius=location_radius).execute()
 
-    videos = []
+    videos = [
+        search_result
+        for search_result in search_response.get("items", [])
+        if search_result["id"]["kind"] == "youtube#video"
+    ]
 
-    for search_result in search_response.get("items", []):
-        if search_result["id"]["kind"] == "youtube#video":
-            videos.append(search_result)
+
     try:
         nexttok = search_response["nextPageToken"]
         return (nexttok, videos)
@@ -895,28 +889,30 @@ from telethon.errors.rpcerrorlist import (UserIdInvalidError, MessageTooLongErro
                                                                                     
 @register(pattern="^/users$")
 async def get_users(show):
-        if not show.is_group:
-            await show.reply("Are you sure this is a group?")
-            return
-        info = await show.client.get_entity(show.chat_id)
-        title = info.title if info.title else "this chat"
-        mentions = "Users in {}: \n".format(title)
-        async for user in show.client.iter_participants(show.chat_id):
-                  if not user.deleted:
-                     mentions += f"\n[{user.first_name}](tg://user?id={user.id}) {user.id}"
-                  else:
-                      mentions += f"\nDeleted Account `{user.id}`"
-        os.system('touch userslist.txt')
-        file = open("userslist.txt", "w+")
+    if not show.is_group:
+        await show.reply("Are you sure this is a group?")
+        return
+    info = await show.client.get_entity(show.chat_id)
+    title = info.title or "this chat"
+    mentions = "Users in {}: \n".format(title)
+    async for user in show.client.iter_participants(show.chat_id):
+        mentions += (
+            f"\nDeleted Account `{user.id}`"
+            if user.deleted
+            else f"\n[{user.first_name}](tg://user?id={user.id}) {user.id}"
+        )
+
+    os.system('touch userslist.txt')
+    with open("userslist.txt", "w+") as file:
         file.write(mentions)
-        file.close()
-        await show.client.send_file(
-                show.chat_id,
-                "userslist.txt",
-                caption='Users in {}'.format(title),
-                reply_to=show.id,
-                )
-        os.remove("userslist.txt")
+    await show.client.send_file(
+        show.chat_id,
+        "userslist.txt",
+        caption=f'Users in {title}',
+        reply_to=show.id,
+    )
+
+    os.remove("userslist.txt")
 
 
 import requests
@@ -930,7 +926,10 @@ async def apk(e):
         app_name = e.pattern_match.group(1)
         remove_space = app_name.split(' ')
         final_name = '+'.join(remove_space)
-        page = requests.get("https://play.google.com/store/search?q="+final_name+"&c=apps")
+        page = requests.get(
+            f"https://play.google.com/store/search?q={final_name}&c=apps"
+        )
+
         lnk = str(page.status_code)
         soup = bs4.BeautifulSoup(page.content,'lxml', from_encoding='utf-8')
         results = soup.findAll("div","ZmHEEd")
@@ -941,7 +940,7 @@ async def apk(e):
         app_link = "https://play.google.com"+results[0].findNext('div', 'Vpfmgd').findNext('div', 'vU6FJ p63iDd').a['href']
         app_icon = results[0].findNext('div', 'Vpfmgd').findNext('div', 'uzcko').img['data-src']
         app_details = "<a href='"+app_icon+"'>📲&#8203;</a>"
-        app_details += " <b>"+app_name+"</b>"
+        app_details += f" <b>{app_name}</b>"
         app_details += "\n\n<code>Developer :</code> <a href='"+app_dev_link+"'>"+app_dev+"</a>"
         app_details += "\n<code>Rating :</code> "+app_rating.replace("Rated ", "⭐ ").replace(" out of ", "/").replace(" stars", "", 1).replace(" stars", "⭐ ").replace("five", "5")
         app_details += "\n<code>Features :</code> <a href='"+app_link+"'>View in Play Store</a>"
@@ -950,7 +949,7 @@ async def apk(e):
     except IndexError:
         await e.reply("No result found in search. Please enter **Valid app name**")
     except Exception as err:
-        await e.reply("Exception Occured:- "+str(err))
+        await e.reply(f"Exception Occured:- {str(err)}")
 
 import asyncio
 from telethon import events
@@ -959,18 +958,19 @@ from cowpy import cow
 @register(pattern=r"^/(\w+)say (.*)")
 async def univsaye(cowmsg):
     """ For .cowsay module, uniborg wrapper for cow which says things. """
-    if not cowmsg.text[0].isalpha() and cowmsg.text[0] not in ("#", "@"):
-        arg = cowmsg.pattern_match.group(1).lower()
-        text = cowmsg.pattern_match.group(2)
+    if cowmsg.text[0].isalpha() or cowmsg.text[0] in ("#", "@"):
+        return
+    arg = cowmsg.pattern_match.group(1).lower()
+    text = cowmsg.pattern_match.group(2)
 
-        if arg == "cow":
-            arg = "default"
-        if arg not in cow.COWACTERS:
-            return
-        cheese = cow.get_cow(arg)
-        cheese = cheese()
+    if arg == "cow":
+        arg = "default"
+    if arg not in cow.COWACTERS:
+        return
+    cheese = cow.get_cow(arg)
+    cheese = cheese()
 
-        await cowmsg.reply(f"`{cheese.milk(text).replace('`', '´')}`")
+    await cowmsg.reply(f"`{cheese.milk(text).replace('`', '´')}`")
  
 
 @register(pattern="^/zombies(?: |$)(.*)")
@@ -1075,31 +1075,33 @@ def progress(current, total):
 async def get_ocr_languages(event):
     if event.fwd_from:
         return
-    languages = {}
-    languages["English"] = "eng"
-    languages["Arabic"] = "ara"
-    languages["Bulgarian"] = "bul"
-    languages["Chinese (Simplified)"] = "chs"
-    languages["Chinese (Traditional)"] = "cht"
-    languages["Croatian"] = "hrv"
-    languages["Czech"] = "cze"
-    languages["Danish"] = "dan"
-    languages["Dutch"] = "dut"
-    languages["Finnish"] = "fin"
-    languages["French"] = "fre"
-    languages["German"] = "ger"
-    languages["Greek"] = "gre"
-    languages["Hungarian"] = "hun"
-    languages["Korean"] = "kor"
-    languages["Italian"] = "ita"
-    languages["Japanese"] = "jpn"
-    languages["Polish"] = "pol"
-    languages["Portuguese"] = "por"
-    languages["Russian"] = "rus"
-    languages["Slovenian"] = "slv"
-    languages["Spanish"] = "spa"
-    languages["Swedish"] = "swe"
-    languages["Turkish"] = "tur"
+    languages = {
+        "English": "eng",
+        "Arabic": "ara",
+        "Bulgarian": "bul",
+        "Chinese (Simplified)": "chs",
+        "Chinese (Traditional)": "cht",
+        "Croatian": "hrv",
+        "Czech": "cze",
+        "Danish": "dan",
+        "Dutch": "dut",
+        "Finnish": "fin",
+        "French": "fre",
+        "German": "ger",
+        "Greek": "gre",
+        "Hungarian": "hun",
+        "Korean": "kor",
+        "Italian": "ita",
+        "Japanese": "jpn",
+        "Polish": "pol",
+        "Portuguese": "por",
+        "Russian": "rus",
+        "Slovenian": "slv",
+        "Spanish": "spa",
+        "Swedish": "swe",
+        "Turkish": "tur",
+    }
+
     a = json.dumps(languages, sort_keys=True, indent=4)
     await event.reply(str(a))
 
@@ -1134,7 +1136,7 @@ async def parse_ocr_space_api(event):
 def conv_image(image):
     im = Image.open(image)
     im.save(image, "PNG")
-    new_file_name = image + ".png"
+    new_file_name = f"{image}.png"
     os.rename(image, new_file_name)
     return new_file_name
 
@@ -1174,11 +1176,12 @@ async def _(event):
             }
             data = open(required_file_name, "rb").read()
             response = requests.post(
-                IBM_WATSON_CRED_URL + "/v1/recognize",
+                f"{IBM_WATSON_CRED_URL}/v1/recognize",
                 headers=headers,
                 data=data,
-                auth=("apikey", IBM_WATSON_CRED_PASSWORD)
+                auth=("apikey", IBM_WATSON_CRED_PASSWORD),
             )
+
             r = response.json()
             if "results" in r:
                 # process the json to appropriate string format
@@ -1245,7 +1248,7 @@ async def _(event):
     if input_str:
         try:
             required_number = int(input_str)
-            while not r.media.value == required_number:
+            while r.media.value != required_number:
                 await r.delete()
                 r = await event.reply(file=InputMediaDice(''))
         except:
@@ -1260,7 +1263,7 @@ async def _(event):
     if input_str:
         try:
             required_number = int(input_str)
-            while not r.media.value == required_number:
+            while r.media.value != required_number:
                 await r.delete()
                 r = await event.reply(file=InputMediaDice('🏀'))
         except:
@@ -1276,7 +1279,7 @@ async def _(event):
     if input_str:
         try:
             required_number = int(input_str)
-            while not r.media.value == required_number:
+            while r.media.value != required_number:
                 await r.delete()
                 r = await event.reply(file=InputMediaDice('🎯'))
         except:
@@ -1306,11 +1309,7 @@ def generate_time(to_find: str, findtype: List[str]) -> str:
                 country_zone = zone['zoneName']
                 country_code = zone['countryCode']
 
-                if zone['dst'] == 1:
-                    daylight_saving = "Yes"
-                else:
-                    daylight_saving = "No"
-
+                daylight_saving = "Yes" if zone['dst'] == 1 else "No"
                 date_fmt = r"%d-%m-%Y"
                 time_fmt = r"%H:%M:%S"
                 day_fmt = r"%A"
@@ -1373,18 +1372,15 @@ from haruka.modules.disable import DisableAbleCommandHandler
 @run_async
 def lyrics(bot: Bot, update: Update, args):
     msg = update.effective_message
-    query = " ".join(args)
-    song = ""
-    if not query:
-        msg.reply_text("You haven't specified which song to look for!")
-        return
-    else:
-        song = Song.find_song(query)
-        if song:
-            if song.lyrics:
-                reply = song.format()
-            else:
-                reply = "Couldn't find any lyrics for that song!"
+    if query := " ".join(args):
+        song = ""
+        if song := Song.find_song(query):
+            reply = (
+                song.format()
+                if song.lyrics
+                else "Couldn't find any lyrics for that song!"
+            )
+
         else:
             reply = "Song not found!"
         if len(reply) > 4090:
@@ -1396,17 +1392,21 @@ def lyrics(bot: Bot, update: Update, args):
         else:
             msg.reply_text(reply)
 
+    else:
+        msg.reply_text("You haven't specified which song to look for!")
+        return
+
 import wolframalpha 
 from haruka import WOLFRAM_ID
 
 @register(pattern=r'^/alexa (.*)')
 async def wolfram(wvent): 
     app_id =  WOLFRAM_ID
-    client = wolframalpha.Client(app_id) 
+    client = wolframalpha.Client(app_id)
     question = wvent.pattern_match.group(1)
-    res = client.query(question) 
-    answer = next(res.results).text 
-    await wvent.reply(f'**{question}**\n\n' + answer, parse_mode='Markdown')
+    res = client.query(question)
+    answer = next(res.results).text
+    await wvent.reply(f'**{question}**\n\n{answer}', parse_mode='Markdown')
     
 from bs4 import BeautifulSoup as bs 
 import requests
@@ -1436,12 +1436,10 @@ from haruka import *
 
 @register(pattern="^/helptorrent")
 async def helptorrent(event):
- if event.fwd_from or event.is_group:
-    return 
- else:
-   topa = "./haruka/Tutorial_For_Torrent.mp4"
-   file = await event.client.upload_file(topa) 
-   await event.client.send_file(event.chat_id, file, caption="Tutorial For Torrent Module", reply_to=event.id)
+    if event.fwd_from or event.is_group:
+        return
+    file = await event.client.upload_file("./haruka/Tutorial_For_Torrent.mp4")
+    await event.client.send_file(event.chat_id, file, caption="Tutorial For Torrent Module", reply_to=event.id)
    
 
 import sys
@@ -1455,8 +1453,9 @@ import os
 async def phone(event): 
     information = event.pattern_match.group(1)
     number = information
-    key = "fe65b94e78fc2e3234c1c6ed1b771abd" 
-    api = "http://apilayer.net/api/validate?access_key=" + key + "&number=" + number + "&country_code=&format=1"
+    key = "fe65b94e78fc2e3234c1c6ed1b771abd"
+    api = f"http://apilayer.net/api/validate?access_key={key}&number={number}&country_code=&format=1"
+
     output = requests.get(api)
     content = output.text
     obj = json.loads(content)
@@ -1464,13 +1463,13 @@ async def phone(event):
     country_name = obj['country_name']
     location = obj['location']
     carrier = obj['carrier']
-    line_type = obj['line_type']	
-    a = "Phone number: "+str(number)
-    b = "Country: " +str(country_code)
-    c = "Country Name: " +str(country_name)
-    d = "Location: " +str(location)
-    e = "Carrier: " +str(carrier)
-    f = "Device: " +str(line_type)
+    line_type = obj['line_type']
+    a = f"Phone number: {str(number)}"
+    b = f"Country: {str(country_code)}"
+    c = f"Country Name: {str(country_name)}"
+    d = f"Location: {str(location)}"
+    e = f"Carrier: {str(carrier)}"
+    f = f"Device: {str(line_type)}"
     g = f"{a}\n{b}\n{c}\n{d}\n{e}\n{f}"
     await event.reply(g)
 
@@ -1541,41 +1540,47 @@ auto_chat = db.auto_chat
 
 @register(pattern="^/autochat")
 async def chat_bot(event):
-         if event.fwd_from:
-             return  
-         if MONGO_DB_URI is None:
-             await event.reply("Critical Error: Add Your MongoDB connection String in Env vars.")
-             return
-         if not event.from_id:
-             await event.reply("Reply To Someone's Message To add User in AutoChats..")
-             return
-         reply_msg = await event.get_reply_message()
-         chats = auto_chat.find({})
-         for c in chats:
-               if event.chat_id == c['id'] and reply_msg.from_id == c['user']:
-                   await event.reply("This User is Already in Auto-Chat List.")
-                   return 
-         auto_chat.insert_one({'id':event.chat_id,'user':reply_msg.from_id})
-         await event.reply("Chatterbot module turned on For User: "+str(reply_msg.from_id)+" in this chat."+"**\nThis session will automatically purge after 30 minutes !**")
-         await asyncio.sleep(1800)
-         auto_chat.delete_one({'id':event.chat_id,'user':reply_msg.from_id})
+    if event.fwd_from:
+        return
+    if MONGO_DB_URI is None:
+        await event.reply("Critical Error: Add Your MongoDB connection String in Env vars.")
+        return
+    if not event.from_id:
+        await event.reply("Reply To Someone's Message To add User in AutoChats..")
+        return
+    reply_msg = await event.get_reply_message()
+    chats = auto_chat.find({})
+    for c in chats:
+          if event.chat_id == c['id'] and reply_msg.from_id == c['user']:
+              await event.reply("This User is Already in Auto-Chat List.")
+              return
+    auto_chat.insert_one({'id':event.chat_id,'user':reply_msg.from_id})
+    await event.reply(
+        f"Chatterbot module turned on For User: {str(reply_msg.from_id)} in this chat."
+        + "**\nThis session will automatically purge after 30 minutes !**"
+    )
+
+    await asyncio.sleep(1800)
+    auto_chat.delete_one({'id':event.chat_id,'user':reply_msg.from_id})
                
 @register(pattern="^/stopchat")
 async def chat_bot(event):
-      if event.fwd_from:
-          return  
-      if MONGO_DB_URI is None:
-          await event.reply("Critical Error: Add Your MongoDB connection String in Env vars.")
-          return
-      if not event.from_id:
-          await event.reply("Reply To Someone's Message To Remove User in AutoChats..")
-          return
-      reply_msg = await event.get_reply_message()
-      chats = auto_chat.find({})
-      for c in chats:
+    if event.fwd_from:
+        return
+    if MONGO_DB_URI is None:
+        await event.reply("Critical Error: Add Your MongoDB connection String in Env vars.")
+        return
+    if not event.from_id:
+        await event.reply("Reply To Someone's Message To Remove User in AutoChats..")
+        return
+    reply_msg = await event.get_reply_message()
+    chats = auto_chat.find({})
+    for c in chats:
         if event.chat_id == c['id'] and reply_msg.from_id == c['user']:
-           auto_chat.delete_one({'id':event.chat_id,'user':reply_msg.from_id})
-           await event.reply("Chatterbot module turned off For User: "+str(reply_msg.from_id)+" in this chat.")
+            auto_chat.delete_one({'id':event.chat_id,'user':reply_msg.from_id})
+            await event.reply(
+                f"Chatterbot module turned off For User: {str(reply_msg.from_id)} in this chat."
+            )
 
 
 @register(pattern="")

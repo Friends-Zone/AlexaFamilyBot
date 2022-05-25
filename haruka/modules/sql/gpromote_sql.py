@@ -16,7 +16,7 @@ class SudoUsers(BASE):
         self.name = name
 
     def __repr__(self):
-        return "<Sudo User {} ({})>".format(self.name, self.user_id)
+        return f"<Sudo User {self.name} ({self.user_id})>"
 
     def to_dict(self):
         return {"user_id": self.user_id,
@@ -43,8 +43,7 @@ def gpromote_user(user_id, name):
 
 def ungpromote_user(user_id):
     with SUDO_USERS_LOCK:
-        user = SESSION.query(SudoUsers).get(user_id)
-        if user:
+        if user := SESSION.query(SudoUsers).get(user_id):
             SESSION.delete(user)
 
         SESSION.commit()

@@ -3,6 +3,7 @@ coded by @By_Azade
 code rewritten my SnapDragon7410
 """
 
+
 import asyncio
 import os
 import time
@@ -19,8 +20,8 @@ from haruka.events import register
 from haruka import TEMP_DOWNLOAD_DIRECTORY
 
 
-extracted = TEMP_DOWNLOAD_DIRECTORY + "extracted/"
-thumb_image_path = TEMP_DOWNLOAD_DIRECTORY + "/thumb_image.jpg"
+extracted = f"{TEMP_DOWNLOAD_DIRECTORY}extracted/"
+thumb_image_path = f"{TEMP_DOWNLOAD_DIRECTORY}/thumb_image.jpg"
 if not os.path.isdir(extracted):
     os.makedirs(extracted)
 
@@ -97,9 +98,10 @@ async def _(event):
                 except Exception as e:
                     await event.client.send_message(
                         event.chat_id,
-                        "{} caused `{}`".format(caption_rts, str(e)),
-                        reply_to=event.message.id
+                        f"{caption_rts} caused `{str(e)}`",
+                        reply_to=event.message.id,
                     )
+
                     # some media were having some issues
                     continue
                 os.remove(single_file)

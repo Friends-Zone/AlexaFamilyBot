@@ -46,9 +46,7 @@ def get_user_id(username):
                     return userdat.id
 
             except BadRequest as excp:
-                if excp.message == 'Chat not found':
-                    pass
-                else:
+                if excp.message != 'Chat not found':
                     LOGGER.exception("Error extracting user ID")
 
     return None
@@ -68,8 +66,9 @@ def broadcast(bot: Bot, update: Update):
                 failed += 1
                 LOGGER.warning("Couldn't send broadcast to %s, group name %s", str(chat.chat_id), str(chat.chat_name))
 
-        update.effective_message.reply_text("Broadcast complete. {} groups failed to receive the message, probably "
-                                            "due to being kicked.".format(failed))
+        update.effective_message.reply_text(
+            f"Broadcast complete. {failed} groups failed to receive the message, probably due to being kicked."
+        )
 
 
 @run_async
@@ -154,7 +153,7 @@ def leavechat(bot: Bot, update: Update, args: List[int]):
         titlechat = bot.get_chat(chat_id).title
         bot.sendMessage(chat_id, "`I'll Go Away!`")
         bot.leaveChat(chat_id)
-        update.effective_message.reply_text("I'll left group {}".format(titlechat))
+        update.effective_message.reply_text(f"I'll left group {titlechat}")
 
     except BadRequest as excp:
         if excp.message == "Chat not found":
@@ -171,9 +170,10 @@ def slist(bot: Bot, update: Update):
     for user_id in SUDO_USERS:
         try:
             user = bot.get_chat(user_id)
-            name = "[{}](tg://user?id={})".format(user.first_name + (user.last_name or ""), user.id)
+            name = f'[{user.first_name + ((user.last_name or ""))}](tg://user?id={user.id})'
+
             if user.username:
-                name = escape_markdown("@" + user.username)
+                name = escape_markdown(f"@{user.username}")
             text1 += "\n - `{}`".format(name)
         except BadRequest as excp:
             if excp.message == 'Chat not found':
@@ -181,9 +181,10 @@ def slist(bot: Bot, update: Update):
     for user_id in SUPPORT_USERS:
         try:
             user = bot.get_chat(user_id)
-            name = "[{}](tg://user?id={})".format(user.first_name + (user.last_name or ""), user.id)
+            name = f'[{user.first_name + ((user.last_name or ""))}](tg://user?id={user.id})'
+
             if user.username:
-                name = escape_markdown("@" + user.username)
+                name = escape_markdown(f"@{user.username}")
             text2 += "\n - `{}`".format(name)
         except BadRequest as excp:
             if excp.message == 'Chat not found':
@@ -198,9 +199,10 @@ def wlist(bot: Bot, update: Update):
     for user_id in WHITELIST_USERS:
         try:
             user = bot.get_chat(user_id)
-            name = "[{}](tg://user?id={})".format(user.first_name + (user.last_name or ""), user.id)
+            name = f'[{user.first_name + ((user.last_name or ""))}](tg://user?id={user.id})'
+
             if user.username:
-                name = escape_markdown("@" + user.username)
+                name = escape_markdown(f"@{user.username}")
             text2 += "\n - `{}`".format(name)
         except BadRequest as excp:
             if excp.message == 'Chat not found':
@@ -216,7 +218,7 @@ def __user_info__(user_id, chat_id):
 
 
 def __stats__():
-    return "{} users, across {} chats".format(sql.num_users(), sql.num_chats())
+    return f"{sql.num_users()} users, across {sql.num_chats()} chats"
 
 
 def __gdpr__(user_id):

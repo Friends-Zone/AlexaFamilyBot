@@ -8,43 +8,42 @@ import pynewtonmath as newton
 import math
 
 def join(args):
-    x = ''.join(map(str, args))
-    return x
+    return ''.join(map(str, args))
 
 @run_async
 def simplify(bot: Bot, update: Update, args: List[str]):
     message = update.effective_message
-    message.reply_text(newton.simplify('{}'.format(join(args))))
+    message.reply_text(newton.simplify(f'{join(args)}'))
 
 @run_async
 def factor(bot: Bot, update: Update, args: List[str]):
     message = update.effective_message
-    message.reply_text(newton.factor('{}'.format(join(args))))
+    message.reply_text(newton.factor(f'{join(args)}'))
 
 @run_async
 def derive(bot: Bot, update: Update, args: List[str]):
     message = update.effective_message
-    message.reply_text(newton.derive('{}'.format(join(args))))
+    message.reply_text(newton.derive(f'{join(args)}'))
 
 @run_async
 def integrate(bot: Bot, update: Update, args: List[str]):
     message = update.effective_message
-    message.reply_text(newton.integrate('{}'.format(join(args))))
+    message.reply_text(newton.integrate(f'{join(args)}'))
 
 @run_async
 def zeroes(bot: Bot, update: Update, args: List[str]):
     message = update.effective_message
-    message.reply_text(newton.zeroes('{}'.format(join(args))))
+    message.reply_text(newton.zeroes(f'{join(args)}'))
 
 @run_async
 def tangent(bot: Bot, update: Update, args: List[str]):
     message = update.effective_message
-    message.reply_text(newton.tangent('{}'.format(join(args))))
+    message.reply_text(newton.tangent(f'{join(args)}'))
 
 @run_async
 def area(bot: Bot, update: Update, args: List[str]):
     message = update.effective_message
-    message.reply_text(newton.area('{}'.format(join(args))))
+    message.reply_text(newton.area(f'{join(args)}'))
 
 @run_async
 def cos(bot: Bot, update: Update, args):

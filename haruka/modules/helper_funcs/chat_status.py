@@ -160,7 +160,11 @@ def user_can_ban(func):
     def user_is_banhammer(bot: Bot, update: Update, *args, **kwargs):
         user = update.effective_user.id
         member = update.effective_chat.get_member(user)
-        if not (member.can_restrict_members or member.status == "creator") and not user in SUDO_USERS:
+        if (
+            not member.can_restrict_members
+            and member.status != "creator"
+            and user not in SUDO_USERS
+        ):
             update.effective_message.reply_text("Sorry you don't have sufficient rights !")
             return ""
         return func(bot, update, *args, **kwargs)
@@ -172,7 +176,11 @@ def user_can_restrict(func):
     def user_is_restrict(bot: Bot, update: Update, *args, **kwargs):
         user = update.effective_user.id
         member = update.effective_chat.get_member(user)
-        if not (member.can_promote_members or member.status == "creator") and not user in SUDO_USERS:
+        if (
+            not member.can_promote_members
+            and member.status != "creator"
+            and user not in SUDO_USERS
+        ):
             update.effective_message.reply_text("Sorry you don't have sufficient rights !")
             return ""
         return func(bot, update, *args, **kwargs)
@@ -184,7 +192,11 @@ def user_can_pin(func):
     def user_pin_can(bot: Bot, update: Update, *args, **kwargs):
         user = update.effective_user.id
         member = update.effective_chat.get_member(user)
-        if not (member.can_pin_messages or member.status == "creator") and not user in SUDO_USERS:
+        if (
+            not member.can_pin_messages
+            and member.status != "creator"
+            and user not in SUDO_USERS
+        ):
             update.effective_message.reply_text("Sorry you don't have sufficient rights !")
             return ""
         return func(bot, update, *args, **kwargs)

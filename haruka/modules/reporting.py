@@ -21,7 +21,7 @@ def report_setting(bot: Bot, update: Update, args: List[str]):
     msg = update.effective_message  # type: Optional[Message]
 
     if chat.type == chat.PRIVATE:
-        if len(args) >= 1:
+        if args:
             if args[0] in ("yes", "on"):
                 sql.set_user_setting(chat.id, True)
                 msg.reply_text("Turned on reporting! You'll be notified whenever anyone reports something.")
@@ -30,22 +30,26 @@ def report_setting(bot: Bot, update: Update, args: List[str]):
                 sql.set_user_setting(chat.id, False)
                 msg.reply_text("Turned off reporting! You wont get any reports.")
         else:
-            msg.reply_text("Your current report preference is: `{}`".format(sql.user_should_report(chat.id)),
-                           parse_mode=ParseMode.MARKDOWN)
+            msg.reply_text(
+                f"Your current report preference is: `{sql.user_should_report(chat.id)}`",
+                parse_mode=ParseMode.MARKDOWN,
+            )
 
+
+    elif args:
+        if args[0] in ("yes", "on"):
+            sql.set_chat_setting(chat.id, True)
+            msg.reply_text("Turned on reporting! Admins who have turned on reports will be notified when /report "
+                           "or @admin are called.")
+
+        elif args[0] in ("no", "off"):
+            sql.set_chat_setting(chat.id, False)
+            msg.reply_text("Turned off reporting! No admins will be notified on /report or @admin.")
     else:
-        if len(args) >= 1:
-            if args[0] in ("yes", "on"):
-                sql.set_chat_setting(chat.id, True)
-                msg.reply_text("Turned on reporting! Admins who have turned on reports will be notified when /report "
-                               "or @admin are called.")
-
-            elif args[0] in ("no", "off"):
-                sql.set_chat_setting(chat.id, False)
-                msg.reply_text("Turned off reporting! No admins will be notified on /report or @admin.")
-        else:
-            msg.reply_text("This chat's current setting is: `{}`".format(sql.chat_should_report(chat.id)),
-                           parse_mode=ParseMode.MARKDOWN)
+        msg.reply_text(
+            f"This chat's current setting is: `{sql.chat_should_report(chat.id)}`",
+            parse_mode=ParseMode.MARKDOWN,
+        )
 
 
 @run_async
@@ -83,22 +87,38 @@ def report(bot: Bot, update: Update) -> str:
 
             should_forward = False
             keyboard = [
-                [InlineKeyboardButton(u"➡ Message", url="https://t.me/{}/{}".format(chat.username, str(
-                    message.reply_to_message.message_id)))],
-                [InlineKeyboardButton(u"⚠ Kick",
-                                      callback_data="report_{}=kick={}={}".format(chat.id, reported_user.id,
-                                                                                  reported_user.first_name)),
-                 InlineKeyboardButton(u"⛔️ Ban",
-                                      callback_data="report_{}=banned={}={}".format(chat.id, reported_user.id,
-                                                                                    reported_user.first_name))],
-                [InlineKeyboardButton(u"❎ Delete Message",
-                                      callback_data="report_{}=delete={}={}".format(chat.id, reported_user.id,
-                                                                                    message.reply_to_message.message_id))]]
+                [
+                    InlineKeyboardButton(
+                        u"➡ Message",
+                        url="https://t.me/{}/{}".format(
+                            chat.username,
+                            str(message.reply_to_message.message_id),
+                        ),
+                    )
+                ],
+                [
+                    InlineKeyboardButton(
+                        u"⚠ Kick",
+                        callback_data=f"report_{chat.id}=kick={reported_user.id}={reported_user.first_name}",
+                    ),
+                    InlineKeyboardButton(
+                        u"⛔️ Ban",
+                        callback_data=f"report_{chat.id}=banned={reported_user.id}={reported_user.first_name}",
+                    ),
+                ],
+                [
+                    InlineKeyboardButton(
+                        u"❎ Delete Message",
+                        callback_data=f"report_{chat.id}=delete={reported_user.id}={message.reply_to_message.message_id}",
+                    )
+                ],
+            ]
+
             reply_markup = InlineKeyboardMarkup(keyboard)
 
         else:
-            msg = "{} is calling for admins in \"{}\"!".format(mention_html(user.id, user.first_name),
-                                                               html.escape(chat_name))
+            msg = f'{mention_html(user.id, user.first_name)} is calling for admins in "{html.escape(chat_name)}"!'
+
             link = ""
             should_forward = True
 
@@ -108,7 +128,7 @@ def report(bot: Bot, update: Update) -> str:
 
             if sql.user_should_report(admin.user.id):
                 try:
-                    if not chat.type == Chat.SUPERGROUP:
+                    if chat.type != Chat.SUPERGROUP:
                         bot.send_message(admin.user.id, msg + link, parse_mode=ParseMode.HTML)
 
                         if should_forward:
@@ -140,9 +160,11 @@ def report(bot: Bot, update: Update) -> str:
                 except BadRequest as excp:  # TODO: cleanup exceptions
                     LOGGER.exception("Exception while reporting user")
 
-        message.reply_to_message.reply_text("{} reported the message to the admins.".
-                                            format(mention_html(user.id, user.first_name)),
-                                            parse_mode=ParseMode.HTML)
+        message.reply_to_message.reply_text(
+            f"{mention_html(user.id, user.first_name)} reported the message to the admins.",
+            parse_mode=ParseMode.HTML,
+        )
+
         return msg
 
     return ""
@@ -153,8 +175,7 @@ def __migrate__(old_chat_id, new_chat_id):
 
 
 def __chat_settings__(bot, update, chat, chatP, user):
-    return "This chat is setup to send user reports to admins, via /report and @admin: `{}`".format(
-        sql.chat_should_report(chat.id))
+    return f"This chat is setup to send user reports to admins, via /report and @admin: `{sql.chat_should_report(chat.id)}`"
 
 
 def __user_settings__(bot, update, user):
@@ -201,18 +222,24 @@ def buttons(bot: Bot, update):
             return ""
         except Exception as err:
             query.answer("❎ Failed to kick")
-            bot.sendMessage(text="Error: {}".format(err),
-                            chat_id=query.message.chat_id,
-                            parse_mode=ParseMode.HTML)
+            bot.sendMessage(
+                text=f"Error: {err}",
+                chat_id=query.message.chat_id,
+                parse_mode=ParseMode.HTML,
+            )
+
     elif splitter[1] == "banned":
         try:
             bot.kickChatMember(splitter[0], splitter[2])
             query.answer("✅  Succesfully Banned")
             return ""
         except Exception as err:
-            bot.sendMessage(text="Error: {}".format(err),
-                            chat_id=query.message.chat_id,
-                            parse_mode=ParseMode.HTML)
+            bot.sendMessage(
+                text=f"Error: {err}",
+                chat_id=query.message.chat_id,
+                parse_mode=ParseMode.HTML,
+            )
+
             query.answer("❎ Failed to ban")
     elif splitter[1] == "delete":
         try:
@@ -220,9 +247,12 @@ def buttons(bot: Bot, update):
             query.answer("✅ Message Deleted")
             return ""
         except Exception as err:
-            bot.sendMessage(text="Error: {}".format(err),
-                                  chat_id=query.message.chat_id,
-                                  parse_mode=ParseMode.HTML)
+            bot.sendMessage(
+                text=f"Error: {err}",
+                chat_id=query.message.chat_id,
+                parse_mode=ParseMode.HTML,
+            )
+
             query.answer("❎ Failed to delete message!")
 
 

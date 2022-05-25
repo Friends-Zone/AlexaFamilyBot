@@ -38,7 +38,7 @@ def get(bot, update, notename, show_none=True, no_format=False):
     chat = update.effective_chat  # type: Optional[Chat]
     user = update.effective_user  # type: Optional[User]
     conn = connected(bot, update, chat, user.id, need_admin=False)
-    if not conn == False:
+    if conn != False:
         chat_id = conn
         send_id = user.id
     else:
@@ -60,24 +60,22 @@ def get(bot, update, notename, show_none=True, no_format=False):
                 try:
                     bot.forward_message(chat_id=chat_id, from_chat_id=MESSAGE_DUMP, message_id=note.value)
                 except BadRequest as excp:
-                    if excp.message == "Message to forward not found":
-                        message.reply_text("This message seems to have been lost - I'll remove it "
-                                           "from your notes list.")
-                        sql.rm_note(chat_id, notename)
-                    else:
+                    if excp.message != "Message to forward not found":
                         raise
+                    message.reply_text("This message seems to have been lost - I'll remove it "
+                                       "from your notes list.")
+                    sql.rm_note(chat_id, notename)
             else:
                 try:
                     bot.forward_message(chat_id=chat_id, from_chat_id=chat_id, message_id=note.value)
                 except BadRequest as excp:
-                    if excp.message == "Message to forward not found":
-                        message.reply_text("Looks like the original sender of this note has deleted "
-                                           "their message - sorry! Get your bot admin to start using a "
-                                           "message dump to avoid this. I'll remove this note from "
-                                           "your saved notes.")
-                        sql.rm_note(chat_id, notename)
-                    else:
+                    if excp.message != "Message to forward not found":
                         raise
+                    message.reply_text("Looks like the original sender of this note has deleted "
+                                       "their message - sorry! Get your bot admin to start using a "
+                                       "message dump to avoid this. I'll remove this note from "
+                                       "your saved notes.")
+                    sql.rm_note(chat_id, notename)
         else:
             text = note.value
             keyb = []
@@ -146,16 +144,12 @@ def save(bot: Bot, update: Update):
     chat = update.effective_chat  # type: Optional[Chat]
     user = update.effective_user  # type: Optional[User]
     conn = connected(bot, update, chat, user.id)
-    if not conn == False:
+    if conn != False:
         chat_id = conn
         chat_name = dispatcher.bot.getChat(conn).title
     else:
         chat_id = update.effective_chat.id
-        if chat.type == "private":
-            chat_name = "local notes"
-        else:
-            chat_name = chat.title
-
+        chat_name = "local notes" if chat.type == "private" else chat.title
     msg = update.effective_message  # type: Optional[Message]
 
     note_name, text, data_type, content, buttons = get_note_type(msg)
@@ -163,10 +157,10 @@ def save(bot: Bot, update: Update):
     if data_type is None:
         msg.reply_text("Dude, there's no note")
         return
-    
+
     if len(text.strip()) == 0:
         text = note_name
-        
+
     sql.add_note_to_db(chat_id, note_name, text, data_type, buttons=buttons, file=content)
 
     msg.reply_text(
@@ -192,21 +186,21 @@ def clear(bot: Bot, update: Update, args: List[str]):
     chat = update.effective_chat  # type: Optional[Chat]
     user = update.effective_user  # type: Optional[User]
     conn = connected(bot, update, chat, user.id)
-    if not conn == False:
+    if conn != False:
         chat_id = conn
         chat_name = dispatcher.bot.getChat(conn).title
     else:
         chat_id = update.effective_chat.id
-        if chat.type == "private":
-            chat_name = "local notes"
-        else:
-            chat_name = chat.title
-    
-    if len(args) >= 1:
+        chat_name = "local notes" if chat.type == "private" else chat.title
+    if args:
         notename = args[0]
 
         if sql.rm_note(chat_id, notename):
-            update.effective_message.reply_text("Note succesfully removed from *{}*.".format(chat_name), parse_mode=ParseMode.MARKDOWN)
+            update.effective_message.reply_text(
+                f"Note succesfully removed from *{chat_name}*.",
+                parse_mode=ParseMode.MARKDOWN,
+            )
+
         else:
             update.effective_message.reply_text("That's not a note in my database!")
 
@@ -216,7 +210,7 @@ def list_notes(bot: Bot, update: Update):
     chat = update.effective_chat  # type: Optional[Chat]
     user = update.effective_user  # type: Optional[User]
     conn = connected(bot, update, chat, user.id, need_admin=False)
-    if not conn == False:
+    if conn != False:
         chat_id = conn
         chat_name = dispatcher.bot.getChat(conn).title
         msg = "*Notes in {}:*\n"
@@ -239,7 +233,10 @@ def list_notes(bot: Bot, update: Update):
         msg += note_name
 
     if not note_list:
-        update.effective_message.reply_text("No notes in *{}*!".format(chat_name), parse_mode=ParseMode.MARKDOWN)
+        update.effective_message.reply_text(
+            f"No notes in *{chat_name}*!", parse_mode=ParseMode.MARKDOWN
+        )
+
 
     elif len(msg) != 0:
         msg += "\nYou can retrieve these notes by using `/get notename`, or `#notename`"
@@ -249,12 +246,9 @@ def list_notes(bot: Bot, update: Update):
 def __import_data__(chat_id, data):
     failures = []
     for notename, notedata in data.get('extra', {}).items():
-        match = FILE_MATCHER.match(notedata)
-
-        if match:
+        if match := FILE_MATCHER.match(notedata):
             failures.append(notename)
-            notedata = notedata[match.end():].strip()
-            if notedata:
+            if notedata := notedata[match.end() :].strip():
                 sql.add_note_to_db(chat_id, notename[1:], notedata, sql.Types.TEXT)
         else:
             sql.add_note_to_db(chat_id, notename[1:], notedata, sql.Types.TEXT)
@@ -269,7 +263,7 @@ def __import_data__(chat_id, data):
 
 
 def __stats__():
-    return "{} notes, across {} chats.".format(sql.num_notes(), sql.num_chats())
+    return f"{sql.num_notes()} notes, across {sql.num_chats()} chats."
 
 
 def __migrate__(old_chat_id, new_chat_id):
@@ -279,7 +273,7 @@ def __migrate__(old_chat_id, new_chat_id):
 def __chat_settings__(bot, update, chat, chatP, user):
     chat_id = chat.id
     notes = sql.get_all_chat_notes(chat_id)
-    return "There are `{}` notes in this chat.".format(len(notes))
+    return f"There are `{len(notes)}` notes in this chat."
 
 
 __help__ = """
